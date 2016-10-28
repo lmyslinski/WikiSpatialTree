@@ -26,13 +26,19 @@ for vertex in g.vertices():
     edges = list(vertex.all_edges())
     parents, children = get_parent_children(vertex, edges)
     if g.vp.child_count[vertex] < 5 and parents is not None:
-        # TODO how to handle many parents?
         if children is None:
             g.vp.merged_categories[parents[0]].append(vertex)
             g.remove_edge(edges[0])
             deletion_list.append(vertex)
             # do sth with children
-
+        else:
+            deletion_list.append(vertex)
+            i = 0
+            for child in children:
+                g.remove_edge(edges[i])
+                i += 1
+                for parent in parents:
+                    g.add_edge(parent, child, add_missing=True)
 # remove orphaned categories
 for v in reversed(sorted(deletion_list)):
     g.remove_vertex(v)
