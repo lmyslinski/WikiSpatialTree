@@ -17,6 +17,7 @@ pattern = re.compile('|'.join(["stub[_s \ Z]",
                                "(_-\ A)(unknown-uncertain)(_-\ Z)",
                                ". * _language_films. *",
                                "_by_year",
+                               "_century",
                                "_shot_in",
                                "female_",
                                "male_",
@@ -27,6 +28,7 @@ pattern = re.compile('|'.join(["stub[_s \ Z]",
                                "alumni",
                                "_screenwriters"]))
 
+list_pattern = re.compile('|'.join([".*_by_"]))
 
 def get_most_important_parent(parents):
     # TODO:
@@ -37,6 +39,8 @@ def get_most_important_parent(parents):
 def filter_by_name(title):
     return re.search(pattern, title) is not None
 
+def filter_by_list_pattern(title):
+    return re.search(list_pattern, title) is not None
 
 def get_parents_children(vertex, edges):
     parents = [g.vertex(x.source()) for x in filter(lambda y: y.target() == vertex, edges)]
@@ -59,6 +63,9 @@ def merge_vertex(vertex, edges, parents, children):
 def match_criteria(vertex):
     return g.vp.child_count[vertex] < 10 or g.vp.article_count[vertex] < 5 or filter_by_name(g.vp.title[vertex])
 
+def match_list(vertex):
+    return filter_by_list_pattern(g.vp.title[vertex])
+
 if not os.path.exists('graph.pickle'):
     print "Graph not found, generating..."
     matrix = builder.build_matrix()
@@ -76,6 +83,13 @@ for vertex in g.vertices():
     parents, children = get_parents_children(vertex, edges)
     if parents.__len__() != 0 and match_criteria(vertex):
         merge_vertex(vertex, edges, parents, children)
+
+# create category "Lists" as a parent for all lists
+lists = g.add_vertex();
+g.vp.title[lists] = "LISTS"
+for vertex in g.vertices():
+    if match_list(vertex):
+        g.add_edge(lists, vertex)
 
 # remove orphaned categories
 for v in reversed(sorted(deletion_list)):
