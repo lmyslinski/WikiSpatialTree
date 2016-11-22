@@ -7,7 +7,8 @@ from graph_tool.all import Graph
 categories_file = 'data/simple/categories'
 categories_title_file = 'data/simple/simple-20120104-titlecat.twr'
 categories_article_count_file = 'data/simple/simple-20120104-pagecount.twr'
-
+categories_links_file = 'data/simple/simple-20120104-catlinks.twr'
+article_links_file = 'data/simple/simple-20120104-pagelinks.twr'
 
 def build_matrix():
     graph_matrix = dict()
@@ -27,6 +28,8 @@ def build_graph(graph_matrix):
     g.vp.title = g.new_vertex_property("string")
     g.vp.article_count = g.new_vertex_property("int")
     g.vp.merged_categories = g.new_vertex_property("vector<int>")
+    g.vp.category_links = g.new_vertex_property("vector<int>")
+    g.vp.article_links = g.new_vertex_property("vector<int>")
     vertex_to_id_map = dict()
     title_to_vertex_id_map = dict()
 
@@ -70,6 +73,17 @@ def build_graph(graph_matrix):
                 art_count = int(row[1])
                 vertex = title_to_vertex_id_map[title_key]
                 g.vp.article_count[vertex] = art_count
+
+
+    # assign category links
+    with open(categories_links_file) as cat_links_file:
+        reader = csv.reader(cat_links_file, delimiter=' ')
+        for row in reader:
+            title_key = row[0]
+            if title_key in title_to_vertex_id_map:
+                vertex = title_to_vertex_id_map[title_key]
+                g.vp.category_links[vertex] = row[1:]
+
 
     # assign children count
     for vertex in g.vertices():
