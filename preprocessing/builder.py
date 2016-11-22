@@ -79,11 +79,10 @@ def build_graph(graph_matrix):
     with open(categories_links_file) as cat_links_file:
         reader = csv.reader(cat_links_file, delimiter=' ')
         for row in reader:
-            title_key = row[0]
-            if title_key in title_to_vertex_id_map:
-                vertex = title_to_vertex_id_map[title_key]
+            key = int(row[0])
+            if key in vertex_to_id_map:
+                vertex = g.vertex(vertex_to_id_map[key])
                 g.vp.category_links[vertex] = row[1:]
-
 
     # assign children count
     for vertex in g.vertices():
