@@ -30,10 +30,17 @@ pattern = re.compile('|'.join(["stub[_s \ Z]",
 
 list_pattern = re.compile('|'.join([".*_by_"]))
 
-def get_most_important_parent(parents):
-    # TODO:
-    # calculate semantic distance between articles in each parent and articles in this node
-    return max(map(lambda x: (g.vp.article_count[x], x), parents), key=lambda x: x[0])[1]
+def get_most_important_parent(vertex, parents):
+    best_parent = parents[0]
+    if parents.__len__() > 1:
+        min_distance = 10000
+        for parent in parents:
+            common_links = list(set(g.vp.category_links[vertex]).intersection(g.vp.category_links[parent]))
+            distance = common_links.__len__()
+            if distance < min_distance:
+              min_distance = distance
+              best_parent = parent
+    return best_parent
 
 
 def filter_by_name(title):
@@ -50,7 +57,7 @@ def get_parents_children(vertex, edges):
 
 def merge_vertex(vertex, edges, parents, children):
     deletion_list.append(vertex)
-    parent = get_most_important_parent(parents)
+    parent = get_most_important_parent(vertex, parents)
     g.vp.merged_categories[parent].append(vertex)
     g.vp.article_count[parent] += g.vp.article_count[vertex]
     for child in children:
@@ -83,6 +90,20 @@ for vertex in g.vertices():
     parents, children = get_parents_children(vertex, edges)
     if parents.__len__() != 0 and match_criteria(vertex):
         merge_vertex(vertex, edges, parents, children)
+
+# if more than 1 parent, choose the more important
+for vertex in g.vertices():
+    edges = list(vertex.all_edges())
+    parents, children = get_parents_children(vertex, edges)
+    if parents.__len__() > 1:
+        best_parent = get_most_important_parent(vertex, parents)
+        for parent in parents:
+            edges = list(vertex.all_edges())
+        for edge in edges:
+            g.remove_edge(edge)
+        for child in children:
+            g.add_edge(vertex, child)
+        g.add_edge(best_parent, vertex)
 
 # create category "Lists" as a parent for all lists
 lists = g.add_vertex();
