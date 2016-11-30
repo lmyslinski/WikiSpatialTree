@@ -30,6 +30,7 @@ pattern = re.compile('|'.join(["stub[_s \ Z]",
 
 list_pattern = re.compile('|'.join([".*_by_"]))
 
+
 def get_most_important_parent(vertex, parents):
     best_parent = parents[0]
     if parents.__len__() > 1:
@@ -38,21 +39,32 @@ def get_most_important_parent(vertex, parents):
             common_links = list(set(g.vp.category_links[vertex]).intersection(g.vp.category_links[parent]))
             distance = common_links.__len__()
             if distance < min_distance:
-              min_distance = distance
-              best_parent = parent
+                min_distance = distance
+                best_parent = parent
     return best_parent
 
 
 def filter_by_name(title):
     return re.search(pattern, title) is not None
 
+
 def filter_by_list_pattern(title):
     return re.search(list_pattern, title) is not None
+
 
 def get_parents_children(vertex, edges):
     parents = [g.vertex(x.source()) for x in filter(lambda y: y.target() == vertex, edges)]
     children = [g.vertex(x.target()) for x in filter(lambda y: y.target() != vertex, edges)]
     return parents, children
+
+
+# filter parents to exclude parent-child cycles
+def get_parents_without_cycles(vertex, edges):
+    return [x for x in filter(lambda p: p not in children, parents)]
+
+
+def get_leftover_edges(vertex, edges, parent):
+    return [x for x in filter(lambda y: y.target() == vertex and y.source() != parent, edges)]
 
 
 def merge_vertex(vertex, edges, parents, children):
@@ -70,8 +82,10 @@ def merge_vertex(vertex, edges, parents, children):
 def match_criteria(vertex):
     return g.vp.child_count[vertex] < 10 or g.vp.article_count[vertex] < 5 or filter_by_name(g.vp.title[vertex])
 
+
 def match_list(vertex):
     return filter_by_list_pattern(g.vp.title[vertex])
+
 
 if not os.path.exists('graph.pickle'):
     print "Graph not found, generating..."
@@ -95,18 +109,14 @@ for vertex in g.vertices():
 for vertex in g.vertices():
     edges = list(vertex.all_edges())
     parents, children = get_parents_children(vertex, edges)
+    parents_without_children = get_parents_without_cycles(parents, children)
     if parents.__len__() > 1:
-        best_parent = get_most_important_parent(vertex, parents)
-        for parent in parents:
-            edges = list(vertex.all_edges())
-        for edge in edges:
-            g.remove_edge(edge)
-        for child in children:
-            g.add_edge(vertex, child)
-        g.add_edge(best_parent, vertex)
+        best_parent = get_most_important_parent(vertex, parents_without_children)
+        leftover_parent_edges = get_leftover_edges(vertex, edges, best_parent)
+        map(g.remove_edge, leftover_parent_edges)
 
 # create category "Lists" as a parent for all lists
-lists = g.add_vertex();
+lists = g.add_vertex()
 g.vp.title[lists] = "LISTS"
 for vertex in g.vertices():
     if match_list(vertex):
@@ -116,7 +126,8 @@ for vertex in g.vertices():
 for v in reversed(sorted(deletion_list)):
     g.remove_vertex(v)
 
+
 print "Finished processing"
 print "Generating graph..."
-graph_draw(g, vertex_text=g.vp.title, vertex_font_size=10, output="test3.png", output_size=(5000, 5000))
+graph_draw(g, vertex_text=g.vp.title, vertex_font_size=10, output="result.png", output_size=(5000, 5000))
 print "Done"
