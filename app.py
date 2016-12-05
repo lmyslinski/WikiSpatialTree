@@ -59,7 +59,7 @@ def get_parents_children(vertex, edges):
 
 
 # filter parents to exclude parent-child cycles
-def get_parents_without_cycles(vertex, edges):
+def get_parents_without_cycles(parents, children):
     return [x for x in filter(lambda p: p not in children, parents)]
 
 
@@ -75,8 +75,7 @@ def merge_vertex(vertex, edges, parents, children):
     for child in children:
         if g.edge(parent, child) is None:
             g.add_edge(parent, child, add_missing=True)
-    for edge in edges:
-        g.remove_edge(edge)
+        map(g.remove_edge, edges)
 
 
 def match_criteria(vertex):
@@ -117,7 +116,7 @@ for vertex in g.vertices():
 
 # create category "Lists" as a parent for all lists
 lists = g.add_vertex()
-g.vp.title[lists] = "LISTS"
+g.vp.title[lists] = "Lists"
 for vertex in g.vertices():
     if match_list(vertex):
         g.add_edge(lists, vertex)
@@ -128,6 +127,8 @@ for v in reversed(sorted(deletion_list)):
 
 
 print "Finished processing"
-print "Generating graph..."
-graph_draw(g, vertex_text=g.vp.title, vertex_font_size=10, output="result.png", output_size=(5000, 5000))
+print "Saving graph..."
+with open('graph_final.pickle', 'wb') as handle:
+    pickle.dump(g, handle)
+# graph_draw(g, vertex_text=g.vp.title, vertex_font_size=10, output="result.png", output_size=(5000, 5000))
 print "Done"
