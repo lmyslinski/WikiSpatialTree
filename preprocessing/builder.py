@@ -92,5 +92,5 @@ def build_graph(graph_matrix, dataset):
             if edge.source() == vertex:
                 g.vp.child_count[edge.source()] += 1
 
-    with open('graph.pickle', 'wb') as handle:
+    with open('data/' + dataset.name + '/graph.pickle', 'wb') as handle:
         pickle.dump(g, handle)
