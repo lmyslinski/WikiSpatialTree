@@ -3,196 +3,173 @@ import os
 import re
 import pickle
 
-pattern = re.compile('|'.join(["stub[_s \ Z]",
-                               "(_-\ A)articles(_-\ Z)",
-                               "template",
-                               "wikipedia \ Z",
-                               "(_-\ A)disambiguation(_-\ Z)",
-                               "(_-\ A)(deaths-births)(_-\ Z)",
-                               "(_-\ A) \ d+s?(_BC)?(_-\ Z)",
-                               "years",
-                               "(_-\ A)century(_-\ Z)",
-                               "(_-\ A)(millennia-millennium)(_-\ Z)",
-                               "(_-\ A)(unknown-uncertain)(_-\ Z)",
-                               ". * _language_films. *",
-                               "_by_year",
-                               "_century",
-                               "_shot_in",
-                               "female_",
-                               "male_",
-                               "with_proper_names",
-                               "people_who",
-                               "Albums_with_cover_art_by_",
-                               "speaking_countries",
-                               "alumni",
-                               "_screenwriters"]))
 
-list_pattern = re.compile('|'.join([".*_by_"]))
+class TreeReducer:
+    def __init__(self):
+        self.pattern = re.compile('|'.join(["stub[_s \ Z]",
+                                            "(_-\ A)articles(_-\ Z)",
+                                            "template",
+                                            "wikipedia \ Z",
+                                            "(_-\ A)disambiguation(_-\ Z)",
+                                            "(_-\ A)(deaths-births)(_-\ Z)",
+                                            "(_-\ A) \ d+s?(_BC)?(_-\ Z)",
+                                            "years",
+                                            "(_-\ A)century(_-\ Z)",
+                                            "(_-\ A)(millennia-millennium)(_-\ Z)",
+                                            "(_-\ A)(unknown-uncertain)(_-\ Z)",
+                                            ". * _language_films. *",
+                                            "_by_year",
+                                            "_century",
+                                            "_shot_in",
+                                            "female_",
+                                            "male_",
+                                            "with_proper_names",
+                                            "people_who",
+                                            "Albums_with_cover_art_by_",
+                                            "speaking_countries",
+                                            "alumni",
+                                            "_screenwriters"]))
 
+        self.list_pattern = re.compile('|'.join([".*_by_"]))
+        self.roots = []
+        self.deletion_list = []
+        self.g = None
 
-def get_most_important_parent(vertex, parents):
-    best_parent = parents[0]
-    if parents.__len__() > 1:
-        min_distance = 10000
-        for parent in parents:
-            common_links = list(set(g.vp.category_links[vertex]).intersection(g.vp.category_links[parent]))
-            distance = common_links.__len__()
-            if distance < min_distance:
-                min_distance = distance
-                best_parent = parent
-    return best_parent
+    def get_most_important_parent(self, vertex, parents):
+        best_parent = parents[0]
+        if parents.__len__() > 1:
+            min_distance = 10000
+            for parent in parents:
+                common_links = list(set(self.g.vp.category_links[vertex]).intersection(self.g.vp.category_links[parent]))
+                distance = common_links.__len__()
+                if distance < min_distance:
+                    min_distance = distance
+                    best_parent = parent
+        return best_parent
 
+    def filter_by_name(self, title):
+        return re.search(self.pattern, title) is not None
 
-def filter_by_name(title):
-    return re.search(pattern, title) is not None
+    def filter_by_list_pattern(self, title):
+        return re.search(self.list_pattern, title) is not None
 
+    def get_parents_children(self, vertex, edges):
+        parents = [self.g.vertex(x.source()) for x in filter(lambda y: y.target() == vertex, edges)]
+        children = [self.g.vertex(x.target()) for x in filter(lambda y: y.target() != vertex, edges)]
+        return parents, children
 
-def filter_by_list_pattern(title):
-    return re.search(list_pattern, title) is not None
+    def get_parents(self, vertex, edges):
+        return [self.g.vertex(x.source()) for x in filter(lambda y: y.target() == vertex, edges)]
 
+    def get_children(self, vertex, edges):
+        return [self.g.vertex(x.target()) for x in filter(lambda y: y.target() != vertex, edges)]
 
-def get_parents_children(vertex, edges):
-    parents = [g.vertex(x.source()) for x in filter(lambda y: y.target() == vertex, edges)]
-    children = [g.vertex(x.target()) for x in filter(lambda y: y.target() != vertex, edges)]
-    return parents, children
+    # filter parents to exclude parent-child cycles
+    def get_parents_without_cycles(self, parents, children):
+        return [x for x in filter(lambda p: p not in children, parents)]
 
+    def get_leftover_edges(self, vertex, edges, parent):
+        return [x for x in filter(lambda y: y.target() == vertex and y.source() != parent, edges)]
 
-def get_parents(vertex, edges):
-    return [g.vertex(x.source()) for x in filter(lambda y: y.target() == vertex, edges)]
+    def get_parent_edges(self, vertex, edges):
+        return [x for x in filter(lambda y: y.target() == vertex, edges)]
 
+    def get_child_edges(self, vertex, edges):
+        return [x for x in filter(lambda y: y.target() != vertex, edges)]
 
-def get_children(vertex, edges):
-    return [g.vertex(x.target()) for x in filter(lambda y: y.target() != vertex, edges)]
-
-
-# filter parents to exclude parent-child cycles
-def get_parents_without_cycles(parents, children):
-    return [x for x in filter(lambda p: p not in children, parents)]
-
-
-def get_leftover_edges(vertex, edges, parent):
-    return [x for x in filter(lambda y: y.target() == vertex and y.source() != parent, edges)]
-
-
-def get_parent_edges(vertex, edges):
-    return [x for x in filter(lambda y: y.target() == vertex, edges)]
-
-
-def get_child_edges(vertex, edges):
-    return [x for x in filter(lambda y: y.target() != vertex, edges)]
-
-
-def merge_vertex(vertex, edges, parents, children):
-    deletion_list.append(vertex)
-    parent = get_most_important_parent(vertex, parents)
-    g.vp.merged_categories[parent].append(vertex)
-    g.vp.article_count[parent] += g.vp.article_count[vertex]
-    for child in children:
-        if g.edge(parent, child) is None:
-            g.add_edge(parent, child, add_missing=True)
-        map(g.remove_edge, edges)
-
-
-def match_criteria(vertex):
-    return g.vp.child_count[vertex] < 10 or g.vp.article_count[vertex] < 5 or filter_by_name(g.vp.title[vertex])
-
-
-def match_list(vertex):
-    return filter_by_list_pattern(g.vp.title[vertex])
-
-
-if not os.path.exists('graph.pickle'):
-    print "Graph not found, generating..."
-    matrix = builder.build_matrix()
-    builder.build_graph(matrix)
-    print "Done"
-
-with open('graph.pickle', 'rb') as handle:
-    g = pickle.load(handle)
-    print "Graph loaded"
-
-init_vert_count = 0
-init_edge_count = 0
-
-deletion_list = []
-
-# delete categories without any parents or children
-for vertex in g.vertices():
-    edges = list(vertex.all_edges())
-    if edges.__len__() == 0:
-        deletion_list.append(vertex)
-
-# merge categories with less than 5 subcategories with their parents
-
-for vertex in g.vertices():
-    edges = list(vertex.all_edges())
-    init_vert_count += 1
-    init_edge_count += edges.__len__()
-    parents, children = get_parents_children(vertex, edges)
-    if parents.__len__() != 0 and match_criteria(vertex):
-        merge_vertex(vertex, edges, parents, children)
-
-
-# if more than 1 parent, choose the more important
-for vertex in g.vertices():
-    edges = list(vertex.all_edges())
-    parents, children = get_parents_children(vertex, edges)
-    parents_without_children = get_parents_without_cycles(parents, children)
-    if parents.__len__() > 1:
-        best_parent = get_most_important_parent(vertex, parents_without_children)
-        leftover_parent_edges = get_leftover_edges(vertex, edges, best_parent)
-        map(g.remove_edge, leftover_parent_edges)
-
-
-# remove orphaned categories
-for v in reversed(sorted(deletion_list)):
-    g.remove_vertex(v)
-
-# create category "Lists" as a parent for all lists
-lists = g.add_vertex()
-g.vp.title[lists] = "Lists"
-
-roots = []
-
-# get roots
-for vertex in g.vertices():
-    edges = list(vertex.all_edges())
-    parents = get_parents(vertex, edges)
-    if parents.__len__() == 0:
-        roots.append(vertex)
-
-
-def filter_lists(vertex):
-    edges = list(vertex.all_edges())
-    if match_list(vertex):
-        parent_edges = get_parent_edges(vertex, edges)
-        map(g.remove_edge, parent_edges)
-        g.add_edge(lists, vertex)
-    else:
-        children = get_children(vertex, edges)
+    def merge_vertex(self, vertex, edges, parents, children):
+        self.deletion_list.append(vertex)
+        parent = self.get_most_important_parent(vertex, parents)
+        self.g.vp.merged_categories[parent].append(vertex)
+        self.g.vp.article_count[parent] += self.g.vp.article_count[vertex]
         for child in children:
-            filter_lists(child)
+            if self.g.edge(parent, child) is None:
+                self.g.add_edge(parent, child, add_missing=True)
+            map(self.g.remove_edge, edges)
 
+    def match_criteria(self, vertex):
+        return self.g.vp.child_count[vertex] < 10 or self.g.vp.article_count[vertex] < 5 or self.filter_by_name(
+            self.g.vp.title[vertex])
 
-for vertex in roots:
-    filter_lists(vertex)
+    def match_list(self, vertex):
+        return self.filter_by_list_pattern(self.g.vp.title[vertex])
 
-final_vert_count = 0
-final_edge_count = 0
+    def load_graph(self):
+        with open('graph.pickle', 'rb') as handle:
+            self.g = pickle.load(handle)
+            print "Graph loaded"
 
-for vertex in g.vertices():
-    final_vert_count += 1
-    final_edge_count += list(vertex.all_edges()).__len__()
+    def create_graph(self):
+        matrix = builder.build_matrix()
+        builder.build_graph(matrix)
 
-print("Initial Categories: " + str(init_vert_count))
-print("Initial Links: " + str(init_edge_count))
+    def isGraphPresent(self):
+        print "Graph not found, generating..."
+        return os.path.exists('graph.pickle')
 
-print("Final Categories: " + str(final_vert_count))
-print("Final Links: " + str(final_edge_count))
+    def mark_categories_for_deletion(self):
+        for vertex in self.g.vertices():
+            edges = list(vertex.all_edges())
+            if edges.__len__() == 0:
+                self.deletion_list.append(vertex)
 
-print "Finished processing"
-print "Saving graph..."
-with open('graph_final.pickle', 'wb') as handle:
-    pickle.dump(g, handle)
-# graph_draw(g, vertex_text=g.vp.title, vertex_font_size=10, output="result.png", output_size=(5000, 5000))
-print "Done"
+    def merge_by_criteria(self):
+        for vertex in self.g.vertices():
+            edges = list(vertex.all_edges())
+            parents, children = self.get_parents_children(vertex, edges)
+            if parents.__len__() != 0 and self.match_criteria(vertex):
+                self.merge_vertex(vertex, edges, parents, children)
+
+    def reduce_to_single_parent(self):
+        for vertex in self.g.vertices():
+            edges = list(vertex.all_edges())
+            parents, children = self.get_parents_children(vertex, edges)
+            parents_without_children = self.get_parents_without_cycles(parents, children)
+            if parents.__len__() > 1:
+                best_parent = self.get_most_important_parent(vertex, parents_without_children)
+                leftover_parent_edges = self.get_leftover_edges(vertex, edges, best_parent)
+                map(self.g.remove_edge, leftover_parent_edges)
+
+    def extract_lists(self):
+        lists_root = self.g.add_vertex()
+        self.g.vp.title[lists_root] = "Lists"
+
+        def filter_lists(vertex):
+            edges = list(vertex.all_edges())
+            if self.match_list(vertex):
+                parent_edges = self.get_parent_edges(vertex, edges)
+                map(self.g.remove_edge, parent_edges)
+                self.g.add_edge(lists_root, vertex)
+            else:
+                children = self.get_children(vertex, edges)
+                for child in children:
+                    filter_lists(child)
+
+        # get roots
+        for vertex in self.g.vertices():
+            edges = list(vertex.all_edges())
+            parents = self.get_parents(vertex, edges)
+            if parents.__len__() == 0:
+                self.roots.append(vertex)
+
+        for vertex in self.roots:
+            filter_lists(vertex)
+
+    def delete_categories(self):
+        for v in reversed(sorted(self.deletion_list)):
+            self.g.remove_vertex(v)
+
+    def run_reductions(self):
+        self.mark_categories_for_deletion()
+        self.merge_by_criteria()
+        self.reduce_to_single_parent()
+        self.delete_categories()
+        self.extract_lists()
+        with open('graph_final.pickle', 'wb') as handle:
+            pickle.dump(self.g, handle)
+        return self.g
+
+red = TreeReducer()
+# red.create_graph()
+red.load_graph()
+red.run_reductions()
