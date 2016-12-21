@@ -4,17 +4,22 @@ import pickle
 
 from graph_tool.all import Graph
 
-categories_file = 'data/simple/categories'
-categories_title_file = 'data/simple/simple-20120104-titlecat.twr'
-categories_article_count_file = 'data/simple/simple-20120104-pagecount.twr'
-categories_links_file = 'data/simple/simple-20120104-catlinks.twr'
-article_links_file = 'data/simple/simple-20120104-pagelinks.twr'
 
-def build_matrix():
+class Dataset:
+    def __init__(self, name, cat_file, cat_title_file, cat_art_count_file, cat_links_file, delimiter):
+        self.cat_links_file = cat_links_file
+        self.cat_art_count_file = cat_art_count_file
+        self.cat_title_file = cat_title_file
+        self.cat_file = cat_file
+        self.name = name
+        self.delimiter = delimiter
+
+
+def build_matrix(dataset):
     graph_matrix = dict()
     print os.getcwd()
-    with open(categories_file) as simple_graph:
-        reader = csv.reader(simple_graph, delimiter='\t')
+    with open(dataset.cat_file) as simple_graph:
+        reader = csv.reader(simple_graph, delimiter=dataset.delimiter)
         for row in reader:
             row = map(int, row)
             row = filter(lambda a: a != 0, row)
@@ -22,7 +27,7 @@ def build_matrix():
     return graph_matrix
 
 
-def build_graph(graph_matrix):
+def build_graph(graph_matrix, dataset):
     g = Graph()
     g.vp.child_count = g.new_vertex_property("int")
     g.vp.title = g.new_vertex_property("string")
@@ -33,10 +38,18 @@ def build_graph(graph_matrix):
     vertex_to_id_map = dict()
     title_to_vertex_id_map = dict()
 
-    # generate all the vertex and map them
-    for key in graph_matrix:
-        v = g.add_vertex()
-        vertex_to_id_map[key] = v
+
+    # generate all vertex
+    with open(dataset.cat_title_file) as titlecat_file:
+        reader = csv.reader(titlecat_file, delimiter=' ')
+        for row in reader:
+            key = int(row[1])
+            vertex = g.add_vertex()
+            vertex_to_id_map[key] = vertex
+            title = row[0]
+            title_to_vertex_id_map[title] = vertex
+            g.vp.title[vertex] = title
+
 
     # reverse the dictionary
     id_to_vertex_map = dict((v, k) for k, v in vertex_to_id_map.iteritems())
@@ -53,19 +66,8 @@ def build_graph(graph_matrix):
             if edge.source() == vertex:
                 g.vp.child_count[edge.source()] += 1
 
-    # assign category titles
-    with open(categories_title_file) as titlecat_file:
-        reader = csv.reader(titlecat_file, delimiter=' ')
-        for row in reader:
-            key = int(row[1])
-            title = row[0]
-            if key in vertex_to_id_map:
-                vertex = g.vertex(vertex_to_id_map[key])
-                title_to_vertex_id_map[title] = vertex
-                g.vp.title[vertex] = title
-
     # assign article count
-    with open(categories_article_count_file) as cat_articles_file:
+    with open(dataset.cat_art_count_file) as cat_articles_file:
         reader = csv.reader(cat_articles_file, delimiter=' ')
         for row in reader:
             title_key = row[0]
@@ -76,7 +78,7 @@ def build_graph(graph_matrix):
 
 
     # assign category links
-    with open(categories_links_file) as cat_links_file:
+    with open(dataset.cat_links_file) as cat_links_file:
         reader = csv.reader(cat_links_file, delimiter=' ')
         for row in reader:
             key = int(row[0])

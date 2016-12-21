@@ -1,4 +1,3 @@
-from graph_tool.all import graph_draw
 from preprocessing import builder
 import os
 import re
@@ -58,6 +57,14 @@ def get_parents_children(vertex, edges):
     return parents, children
 
 
+def get_parents(vertex, edges):
+    return [g.vertex(x.source()) for x in filter(lambda y: y.target() == vertex, edges)]
+
+
+def get_children(vertex, edges):
+    return [g.vertex(x.target()) for x in filter(lambda y: y.target() != vertex, edges)]
+
+
 # filter parents to exclude parent-child cycles
 def get_parents_without_cycles(parents, children):
     return [x for x in filter(lambda p: p not in children, parents)]
@@ -65,6 +72,14 @@ def get_parents_without_cycles(parents, children):
 
 def get_leftover_edges(vertex, edges, parent):
     return [x for x in filter(lambda y: y.target() == vertex and y.source() != parent, edges)]
+
+
+def get_parent_edges(vertex, edges):
+    return [x for x in filter(lambda y: y.target() == vertex, edges)]
+
+
+def get_child_edges(vertex, edges):
+    return [x for x in filter(lambda y: y.target() != vertex, edges)]
 
 
 def merge_vertex(vertex, edges, parents, children):
@@ -96,13 +111,27 @@ with open('graph.pickle', 'rb') as handle:
     g = pickle.load(handle)
     print "Graph loaded"
 
-# merge categories with less than 5 subcategories with their parents
+init_vert_count = 0
+init_edge_count = 0
+
 deletion_list = []
+
+# delete categories without any parents or children
 for vertex in g.vertices():
     edges = list(vertex.all_edges())
+    if edges.__len__() == 0:
+        deletion_list.append(vertex)
+
+# merge categories with less than 5 subcategories with their parents
+
+for vertex in g.vertices():
+    edges = list(vertex.all_edges())
+    init_vert_count += 1
+    init_edge_count += edges.__len__()
     parents, children = get_parents_children(vertex, edges)
     if parents.__len__() != 0 and match_criteria(vertex):
         merge_vertex(vertex, edges, parents, children)
+
 
 # if more than 1 parent, choose the more important
 for vertex in g.vertices():
@@ -114,17 +143,52 @@ for vertex in g.vertices():
         leftover_parent_edges = get_leftover_edges(vertex, edges, best_parent)
         map(g.remove_edge, leftover_parent_edges)
 
-# create category "Lists" as a parent for all lists
-lists = g.add_vertex()
-g.vp.title[lists] = "Lists"
-for vertex in g.vertices():
-    if match_list(vertex):
-        g.add_edge(lists, vertex)
 
 # remove orphaned categories
 for v in reversed(sorted(deletion_list)):
     g.remove_vertex(v)
 
+# create category "Lists" as a parent for all lists
+lists = g.add_vertex()
+g.vp.title[lists] = "Lists"
+
+roots = []
+
+# get roots
+for vertex in g.vertices():
+    edges = list(vertex.all_edges())
+    parents = get_parents(vertex, edges)
+    if parents.__len__() == 0:
+        roots.append(vertex)
+
+
+def filter_lists(vertex):
+    edges = list(vertex.all_edges())
+    if match_list(vertex):
+        parent_edges = get_parent_edges(vertex, edges)
+        map(g.remove_edge, parent_edges)
+        g.add_edge(lists, vertex)
+    else:
+        children = get_children(vertex, edges)
+        for child in children:
+            filter_lists(child)
+
+
+for vertex in roots:
+    filter_lists(vertex)
+
+final_vert_count = 0
+final_edge_count = 0
+
+for vertex in g.vertices():
+    final_vert_count += 1
+    final_edge_count += list(vertex.all_edges()).__len__()
+
+print("Initial Categories: " + str(init_vert_count))
+print("Initial Links: " + str(init_edge_count))
+
+print("Final Categories: " + str(final_vert_count))
+print("Final Links: " + str(final_edge_count))
 
 print "Finished processing"
 print "Saving graph..."
