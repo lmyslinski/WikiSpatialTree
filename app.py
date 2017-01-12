@@ -1,9 +1,13 @@
+import time
+from sys import stdout
+
+from graph_tool.draw import graph_draw
+from graph_tool.topology import shortest_path, shortest_distance
+
 from preprocessing import builder
 import os
 import re
 import pickle
-
-from preprocessing.builder import Dataset
 
 
 class TreeReducer:
@@ -83,16 +87,37 @@ class TreeReducer:
     def merge_vertex(self, vertex, edges, parents, children):
         self.deletion_list.append(vertex)
         parent = self.get_most_important_parent(vertex, parents)
-        self.g.vp.merged_categories[parent].append(vertex)
-        self.g.vp.article_count[parent] += self.g.vp.article_count[vertex]
+        children_before = self.g.vp.child_count[vertex]
+        parent_children_before = self.g.vp.child_count[parent]
+
+        self.g.vp.merged_categories[parent].append(self.g.vp.title[vertex])
+        self.g.vp.merged_categories[parent].extend(self.g.vp.merged_categories[vertex])
+        self.g.vp.articles[parent].extend(self.g.vp.articles[vertex])
         for child in children:
             if self.g.edge(parent, child) is None:
                 self.g.add_edge(parent, child, add_missing=True)
-            map(self.g.remove_edge, edges)
+
+        self.g.vp.child_count[parent] += children.__len__()
+        map(self.g.remove_edge, edges)
+        parent_children_after = self.g.vp.child_count[parent]
+        # if parent_children_after != children_before + parent_children_before:
+        #     child_string = ""
+        #     parent_child_string = ""
+        #     for child in children:
+        #         child_string += self.g.vp.title[child] + " "
+        #     print "Merged: " + self.g.vp.title[vertex] + " to: " + self.g.vp.title[parent] + " %d + %d = %d" % (children_before, parent_children_before, parent_children_after)
+        #     print "Children: " + child_string
+        #
+        #     parent_edges = parent.all_edges()
+        #     parent_children = self.get_children(parent, parent_edges)
+        #     for child in parent_children:
+        #         parent_child_string += self.g.vp.title[child] + " "
+        #
+        #     print "Parent children: " + parent_child_string
 
     def match_criteria(self, vertex, child_count, article_count):
-        return self.g.vp.child_count[vertex] < child_count or self.g.vp.article_count[
-                                                                  vertex] < article_count or self.filter_by_name(
+        return (self.g.vp.child_count[vertex] < child_count and self.g.vp.articles[vertex].__len__() < article_count) \
+               or self.filter_by_name(
             self.g.vp.title[vertex])
 
     def match_list(self, vertex):
@@ -116,6 +141,14 @@ class TreeReducer:
             if edges.__len__() == 0:
                 self.deletion_list.append(vertex)
 
+        print ("Categories marked for removal due to no connections: %d" % self.deletion_list.__len__())
+
+    def calculate_children_count(self):
+        for vertex in self.g.vertices():
+            edges = list(vertex.all_edges())
+            parents, children = self.get_parents_children(vertex, edges)
+            self.g.vp.child_count[vertex] = children.__len__()
+
     def merge_by_criteria(self, child_count, article_count):
         for vertex in self.g.vertices():
             edges = list(vertex.all_edges())
@@ -124,6 +157,7 @@ class TreeReducer:
                 self.merge_vertex(vertex, edges, parents, children)
 
     def reduce_to_single_parent(self):
+        print ("Choosing most important parents")
         for vertex in self.g.vertices():
             edges = list(vertex.all_edges())
             parents, children = self.get_parents_children(vertex, edges)
@@ -131,7 +165,8 @@ class TreeReducer:
             if parents.__len__() > 1:
                 best_parent = self.get_most_important_parent(vertex, parents_without_children)
                 leftover_parent_edges = self.get_leftover_edges(vertex, edges, best_parent)
-                map(self.g.remove_edge, leftover_parent_edges)
+                for edge in leftover_parent_edges:
+                    self.g.remove_edge(edge)
 
     def extract_lists(self):
         lists_root = self.g.add_vertex()
@@ -160,16 +195,43 @@ class TreeReducer:
             filter_lists(vertex)
 
     def delete_categories(self):
-        for v in reversed(sorted(self.deletion_list)):
-            self.g.remove_vertex(v)
 
-    def run_reductions(self, child_count, article_count):
+        i = 0
+        len = self.deletion_list.__len__()
+        print ("Removing %d categories" % len)
+        for v in reversed(sorted(self.deletion_list)):
+            try:
+                self.g.remove_vertex(v)
+                i += 1
+            except Exception:
+                print('Failed at ' + v.toString())
+                # return
+            stdout.write("\r%.2f " % ((float(i) / len) * 100) + "%" + " Category ID: %d" % v)
+            stdout.flush()
+
+        stdout.write("\n")
+        stdout.write("\rCategories removed\n")
         self.deletion_list = []
-        self.mark_categories_for_deletion()
-        self.merge_by_criteria(child_count, article_count)
-        self.reduce_to_single_parent()
-        self.delete_categories()
-        self.extract_lists()
-        with open('data/' + self.dataset.name + '/graph_final.pickle', 'wb') as handle:
-            pickle.dump(self.g, handle)
-        return self.g
+
+    def calculate_centrality(self):
+
+        # ix = 0
+        # glen = list(self.g.vertices()).__len__()
+        #
+        # for vertex in self.g.vertices():
+        #     sd = shortest_distance(self.g, source=vertex, directed=False)
+        #     p = [x for x in filter(lambda p: p != 2147483647, sd)]
+        #     sump = sum(p)
+        #     self.g.vp.harmonic_centrality[vertex] = 1 / float(sump) if sump != 0 else 0
+        #     ix += 1
+        #     stdout.write("\r%.2f " % ((float(ix) / glen) * 100) + "%" + " Centrality progress")
+        #
+        # stdout.write("\n")
+        maxval = max(list([self.g.vp.harmonic_centrality[x] for x in self.g.vertices()]))
+        print(maxval)
+
+        # for vertex in self.g.vertices():
+        #     self.g.vp.harmonic_centrality[vertex] = self.g.vp.harmonic_centrality[vertex] / maxval
+
+            # end = time.time()
+            # print ("centrality calculated in " + str(end - start))
