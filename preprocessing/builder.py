@@ -51,31 +51,11 @@ def build_graph(graph_matrix, dataset):
             title_to_vertex_id_map[title] = vertex
             g.vp.title[vertex] = title
 
-
-    # reverse the dictionary
-    id_to_vertex_map = dict((v, k) for k, v in vertex_to_id_map.iteritems())
-
     # populate the graph with edges
     for key in graph_matrix:
         adjacency_list = graph_matrix[key]
         for edge in adjacency_list:
             g.add_edge(vertex_to_id_map[key], vertex_to_id_map[edge])
-
-    # # assign children count
-    # for vertex in g.vertices():
-    #     for edge in vertex.all_edges():
-    #         if edge.source() == vertex:
-    #             g.vp.child_count[edge.source()] += 1
-
-    # # assign article count
-    # with open(dataset.cat_art_count_file) as cat_articles_file:
-    #     reader = csv.reader(cat_articles_file, delimiter=' ')
-    #     for row in reader:
-    #         title_key = row[0]
-    #         if title_key in title_to_vertex_id_map:
-    #             art_count = int(row[1])
-    #             vertex = title_to_vertex_id_map[title_key]
-    #             g.vp.article_count[vertex] = art_count
 
     all_articles_map = dict()
     with open(dataset.page_title_file) as page_title_file:

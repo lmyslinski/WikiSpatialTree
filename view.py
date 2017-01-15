@@ -9,7 +9,7 @@ from preprocessing.builder import Dataset
 def get_roots(g):
     roots = []
     for vertex in g.vertices():
-        if get_parent_count(g, vertex) == 0:
+        if get_parent_count(g, vertex) == 0 and get_child_count(g, vertex) != 0:
             roots.append(vertex)
     return sorted(roots, key=lambda x: g.vp.title[x], reverse=True)
 
@@ -19,17 +19,12 @@ def get_parent_count(g, vertex):
 
 
 def get_child_count(g, vertex):
-    return [g.vertex(x.target()) for x in filter(lambda y: y.target() != vertex, list(vertex.all_edges()))].__len__()
+    return g.vp.child_count[vertex]
 
 
 def get_children(g, vertex):
     return sorted([g.vertex(x.target()) for x in filter(lambda y: y.target() != vertex, list(vertex.all_edges()))],
                   key=lambda z: g.vp.title[z], reverse=True)
-
-
-def load_graph():
-    with open('graph_final.pickle', 'rb') as handle:
-        return pickle.load(handle)
 
 
 class App(Frame):
@@ -65,15 +60,13 @@ class App(Frame):
             self.graphStatusText.set("Graph not found")
 
     def buildGraph(self):
-        self.operation.set("Creating input graph...")
         self.tr.create_graph()
         self.isGraphPresent = TreeReducer.isGraphPresent(self.tr)
         if self.isGraphPresent:
             self.reduceButton.state(["!disabled"])
-            self.graphStatusText.set("Ok, graph present")
 
     def loadGraph(self):
-        with open('data/polish/graph_final.pickle', 'rb') as handle:
+        with open('data/' + self.chosenDatasetName.get() + '/graph.pickle', 'rb') as handle:
             self.g = pickle.load(handle)
             self.create_tree()
 
@@ -115,6 +108,8 @@ class App(Frame):
             for article in sorted(self.g.vp.articles[id]):
                 self.articles_box.insert(END, article)
 
+    def calculateCentrality(self):
+        return
 
 
     def initUI(self):
@@ -124,23 +119,21 @@ class App(Frame):
         self.right_frame.pack()
         self.pack(fill=BOTH, expand=1)
         # Top Frame
-        self.searchLabel = ttk.Label(self.top_frame, text="Search:", font=("Helvetica", 12))
+        # self.searchLabel = ttk.Label(self.top_frame, text="Search:", font=("Helvetica", 12))
         self.chooseLabel = ttk.Label(self.top_frame, text="Dataset", font=("Helvetica", 12))
-        self.graphLabel = ttk.Label(self.top_frame, text="Input graph", font=("Helvetica", 12))
-        self.graphStatus = ttk.Label(self.top_frame, textvariable=self.graphStatusText, font=("Helvetica", 12))
 
-        self.buildGraphButton = ttk.Button(self.top_frame, text='Generate input graph', command=self.buildGraph)
-        self.reduceButton = ttk.Button(self.top_frame, text='Generate output graph', command=self.reduce)
+        self.reduceButton = ttk.Button(self.top_frame, text='Reduce', command=self.reduce)
         self.loadButton = ttk.Button(self.top_frame, text='Load graph', command=self.loadGraph)
+        self.centralityButton = ttk.Button(self.top_frame, text='Calculate centrality', command=self.calculateCentrality)
 
         self.childCountLabel = ttk.Label(self.top_frame, text="Min Child count:", font=("Helvetica", 12))
         self.childCountInput = ttk.Entry(self.top_frame, textvariable=self.childCount)
         self.articleCountLabel = ttk.Label(self.top_frame, text="Min Article count:", font=("Helvetica", 12))
         self.articleCountInput = ttk.Entry(self.top_frame, textvariable=self.articleCount)
-
-        self.searchInput = ttk.Entry(self.top_frame, textvariable=self.search_text)
-        self.searchInput.grid(row=2, column=1, sticky="w", padx=5, pady=5)
-        self.search_text.trace("w", lambda name, index, mode, sv=self.search_text: self.search())
+        #
+        # self.searchInput = ttk.Entry(self.top_frame, textvariable=self.search_text)
+        # self.searchInput.grid(row=2, column=3, sticky="w", padx=5, pady=5)
+        # self.search_text.trace("w", lambda name, index, mode, sv=self.search_text: self.search())
 
         self.chosenDatasetName = StringVar()
         self.chooseCombo = ttk.Combobox(self.top_frame, textvariable=self.chosenDatasetName, state='readonly')
@@ -148,18 +141,16 @@ class App(Frame):
         self.chooseCombo.bind("<<ComboboxSelected>>", self.newselection)
         self.chooseLabel.grid(row=0, column=0, sticky="w", padx=5, pady=5)
         self.chooseCombo.grid(row=0, column=1, sticky="w", padx=5, pady=5)
-        self.graphLabel.grid(row=0, column=2, sticky="w", padx=5, pady=5)
-        self.graphStatus.grid(row=0, column=3, sticky="w", padx=5, pady=5)
-        self.buildGraphButton.grid(row=0, column=4, sticky="w", padx=5, pady=5)
 
         self.childCountLabel.grid(row=1, column=0, sticky="w", padx=5, pady=5)
         self.childCountInput.grid(row=1, column=1, sticky="w", padx=5, pady=5)
-        self.articleCountLabel.grid(row=1, column=2, sticky="w", padx=5, pady=5)
-        self.articleCountInput.grid(row=1, column=3, sticky="w", padx=5, pady=5)
-        self.reduceButton.grid(row=1, column=4, sticky="w", padx=5, pady=5)
-        self.loadButton.grid(row=2, column=4, sticky="w", padx=5, pady=5)
+        self.articleCountLabel.grid(row=2, column=0, sticky="w", padx=5, pady=5)
+        self.articleCountInput.grid(row=2, column=1, sticky="w", padx=5, pady=5)
+        self.reduceButton.grid(row=1, column=2, sticky="w", padx=5, pady=5)
+        self.loadButton.grid(row=0, column=2, sticky="w", padx=5, pady=5)
+        self.centralityButton.grid(row=2, column=2, sticky="w", padx=5, pady=5)
 
-        self.searchLabel.grid(row=2, column=0, sticky="w", padx=5, pady=5)
+        # self.searchLabel.grid(row=3, column=1, sticky="w", padx=5, pady=5)
 
         # Tree with sidebar
 
@@ -218,10 +209,8 @@ class App(Frame):
         self.articleCount.set(10)
         if self.isGraphPresent:
             self.reduceButton.state(["!disabled"])
-            self.graphStatusText.set("Ok, graph present")
         else:
             self.reduceButton.state(["disabled"])
-            self.graphStatusText.set("Graph not found")
 
     def center_window(self):
         w = 800
@@ -234,20 +223,22 @@ class App(Frame):
 
     def create_tree(self):
         roots = get_roots(self.g)
-        [self.add_children(root, "") for root in roots]
 
-    def add_children(self, parent, parent_id):
-        id = self.tree.insert(parent_id, 0, text=str(self.g.vp.title[parent]), values=(
-            str(self.g.vp.child_count[parent]),
-            str(self.g.vp.articles[parent].__len__()),
-            "%2f" % self.g.vp.harmonic_centrality[parent],
-            parent))
+        [self.add_children(root, "", 0) for root in roots]
 
-        self.tree.item(id, open=True)
-        children = get_children(self.g, parent)
-        for child in children:
-            if child != parent:
-                self.add_children(child, id)
+    def add_children(self, parent, parent_id, depth):
+        if depth < 10:
+            id = self.tree.insert(parent_id, 0, text=str(self.g.vp.title[parent]), values=(
+                str(self.g.vp.child_count[parent]),
+                str(self.g.vp.articles[parent].__len__()),
+                "%2f" % self.g.vp.harmonic_centrality[parent],
+                parent))
+
+            self.tree.item(id, open=True)
+            children = get_children(self.g, parent)
+            for child in children:
+                if child != parent:
+                    self.add_children(child, id, depth+1)
 
 
 def main():

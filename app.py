@@ -87,33 +87,18 @@ class TreeReducer:
     def merge_vertex(self, vertex, edges, parents, children):
         self.deletion_list.append(vertex)
         parent = self.get_most_important_parent(vertex, parents)
-        children_before = self.g.vp.child_count[vertex]
-        parent_children_before = self.g.vp.child_count[parent]
 
         self.g.vp.merged_categories[parent].append(self.g.vp.title[vertex])
         self.g.vp.merged_categories[parent].extend(self.g.vp.merged_categories[vertex])
         self.g.vp.articles[parent].extend(self.g.vp.articles[vertex])
+        self.g.vp.articles[vertex] = []
         for child in children:
             if self.g.edge(parent, child) is None:
                 self.g.add_edge(parent, child, add_missing=True)
 
         self.g.vp.child_count[parent] += children.__len__()
+        self.g.vp.child_count[vertex] = 0
         map(self.g.remove_edge, edges)
-        parent_children_after = self.g.vp.child_count[parent]
-        # if parent_children_after != children_before + parent_children_before:
-        #     child_string = ""
-        #     parent_child_string = ""
-        #     for child in children:
-        #         child_string += self.g.vp.title[child] + " "
-        #     print "Merged: " + self.g.vp.title[vertex] + " to: " + self.g.vp.title[parent] + " %d + %d = %d" % (children_before, parent_children_before, parent_children_after)
-        #     print "Children: " + child_string
-        #
-        #     parent_edges = parent.all_edges()
-        #     parent_children = self.get_children(parent, parent_edges)
-        #     for child in parent_children:
-        #         parent_child_string += self.g.vp.title[child] + " "
-        #
-        #     print "Parent children: " + parent_child_string
 
     def match_criteria(self, vertex, child_count, article_count):
         return (self.g.vp.child_count[vertex] < child_count and self.g.vp.articles[vertex].__len__() < article_count) \
