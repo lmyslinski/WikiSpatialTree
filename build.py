@@ -12,5 +12,6 @@ ds = Dataset("polish", 'data/polish/simple-20120104-cattreeid.twr',
 
 ds2 = Dataset("simple", 'data/simple/categories', 'data/simple/simple-20120104-titlecat.twr',
               'data/simple/simple-20120104-catlinks.twr', 'data/simple/simple-20120104-pagetitle.twr', '\t')
-matrix = builder.build_matrix(ds)
-builder.build_graph(matrix, ds)
+
+builder.build_graph(builder.build_matrix(ds), ds)
+builder.build_graph(builder.build_matrix(ds2), ds2)

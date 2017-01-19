@@ -157,6 +157,7 @@ class TreeReducer:
         lists_root = self.g.add_vertex()
         roots = []
         self.g.vp.title[lists_root] = "Lists"
+        print lists_root
 
         def filter_lists(vertex):
             edges = list(vertex.all_edges())
@@ -179,6 +180,7 @@ class TreeReducer:
         for vertex in roots:
             filter_lists(vertex)
 
+
     def delete_categories(self):
 
         i = 0
@@ -200,23 +202,25 @@ class TreeReducer:
 
     def calculate_centrality(self):
 
-        # ix = 0
-        # glen = list(self.g.vertices()).__len__()
-        #
-        # for vertex in self.g.vertices():
-        #     sd = shortest_distance(self.g, source=vertex, directed=False)
-        #     p = [x for x in filter(lambda p: p != 2147483647, sd)]
-        #     sump = sum(p)
-        #     self.g.vp.harmonic_centrality[vertex] = 1 / float(sump) if sump != 0 else 0
-        #     ix += 1
-        #     stdout.write("\r%.2f " % ((float(ix) / glen) * 100) + "%" + " Centrality progress")
-        #
-        # stdout.write("\n")
+        ix = 0
+        glen = list(self.g.vertices()).__len__()
+
+        start = time.time()
+
+        for vertex in self.g.vertices():
+            sd = shortest_distance(self.g, source=vertex, directed=False)
+            p = [x for x in filter(lambda p: p != 2147483647, sd)]
+            sump = sum(p)
+            self.g.vp.harmonic_centrality[vertex] = 1 / float(sump) if sump != 0 else 0
+            ix += 1
+            stdout.write("Calculating centrality: " + "\r%.2f " % ((float(ix) / glen) * 100) + "%")
+
+        stdout.write("\n")
         maxval = max(list([self.g.vp.harmonic_centrality[x] for x in self.g.vertices()]))
         print(maxval)
 
-        # for vertex in self.g.vertices():
-        #     self.g.vp.harmonic_centrality[vertex] = self.g.vp.harmonic_centrality[vertex] / maxval
+        for vertex in self.g.vertices():
+            self.g.vp.harmonic_centrality[vertex] = self.g.vp.harmonic_centrality[vertex] / maxval
 
-            # end = time.time()
-            # print ("centrality calculated in " + str(end - start))
+        end = time.time()
+        print ("centrality calculated in " + str(end - start))

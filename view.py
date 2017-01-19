@@ -37,6 +37,7 @@ class App(Frame):
         self.datasets = datasets
 
         self.tr = None
+        self.g = None
         self.operation = StringVar()
         self.chosenDatasetName = StringVar()
         self.childCount = IntVar()
@@ -44,55 +45,57 @@ class App(Frame):
         self.search_text = StringVar()
         self.chosenDataset = self.datasets["simple"]
         self.tr = TreeReducer(self.chosenDataset)
-        self.isGraphPresent = TreeReducer.isGraphPresent(self.tr)
+        self.isGraphPresent = False
         self.initUI()
+
+
+    def validate_buttons(self):
+        if self.isGraphPresent:
+            self.reduceButton.state(["!disabled"])
+            self.centralityButton.state(["!disabled"])
+        else:
+            self.reduceButton.state(["disabled"])
+            self.centralityButton.state(["disabled"])
 
     def newselection(self, event):
         self.chosenDatasetName = self.chooseCombo.get()
         self.chosenDataset = self.datasets[self.chosenDatasetName]
         self.tr = TreeReducer(self.chosenDataset)
-        self.isGraphPresent = TreeReducer.isGraphPresent(self.tr)
-        if self.isGraphPresent:
-            self.reduceButton.state(["!disabled"])
-            self.graphStatusText.set("Ok, graph present")
-        else:
-            self.reduceButton.state(["disabled"])
-            self.graphStatusText.set("Graph not found")
+        self.isGraphPresent = False
+        self.validate_buttons()
 
-    def buildGraph(self):
-        self.tr.create_graph()
-        self.isGraphPresent = TreeReducer.isGraphPresent(self.tr)
-        if self.isGraphPresent:
-            self.reduceButton.state(["!disabled"])
-
-    def loadGraph(self):
-        with open('data/' + self.chosenDatasetName.get() + '/graph.pickle', 'rb') as handle:
+    def load_graph(self):
+        with open('data/' + self.chosenDatasetName + '/graph.pickle', 'rb') as handle:
             self.g = pickle.load(handle)
             self.create_tree()
+            self.isGraphPresent = TreeReducer.isGraphPresent(self.tr)
+            self.validate_buttons()
 
-    def search(self, item=''):
-        children = self.tree.get_children(item)
-        for child in children:
-            text = self.tree.item(child, 'text')
-            if text.startswith(self.search_text.get()):
-                self.tree.selection_set(child)
-                self.tree.see(child)
-                return True
-            else:
-                res = self.search(child)
-                if res:
-                    return True
+    def load_final_graph(self):
+        with open('data/' + self.chosenDatasetName + '/graph_final.pickle', 'rb') as handle:
+            self.g = pickle.load(handle)
+            self.create_tree()
+            self.isGraphPresent = TreeReducer.isGraphPresent(self.tr)
+            self.validate_buttons()
 
     def reduce(self):
-        self.tree.delete(*self.tree.get_children())
         self.tr = TreeReducer(self.chosenDataset)
-        self.tr.load_graph()
-        self.tr.mark_categories_for_deletion()
-        self.tr.merge_by_criteria(5, 10)
+        self.tr.g = self.g
         self.tr.reduce_to_single_parent()
         self.tr.extract_lists()
-        self.tr.delete_categories()
+        self.tr.calculate_children_count()
+        self.tr.merge_by_criteria(5, 10)
+        self.create_tree()
+        print ("Reduction done")
+        with open('data/' + self.chosenDatasetName + '/graph_final.pickle', 'wb') as handle:
+            pickle.dump(self.g, handle)
+
+    def calculate_centrality(self):
+        self.tr.calculate_centrality()
         self.g = self.tr.g
+        with open('data/' + self.chosenDatasetName + '/graph_final.pickle', 'wb') as handle:
+            pickle.dump(self.g, handle)
+
         self.create_tree()
 
     def selectItem(self, event):
@@ -108,10 +111,6 @@ class App(Frame):
             for article in sorted(self.g.vp.articles[id]):
                 self.articles_box.insert(END, article)
 
-    def calculateCentrality(self):
-        return
-
-
     def initUI(self):
         self.parent.title("Wikipedia Category Tree")
         self.center_window()
@@ -123,8 +122,9 @@ class App(Frame):
         self.chooseLabel = ttk.Label(self.top_frame, text="Dataset", font=("Helvetica", 12))
 
         self.reduceButton = ttk.Button(self.top_frame, text='Reduce', command=self.reduce)
-        self.loadButton = ttk.Button(self.top_frame, text='Load graph', command=self.loadGraph)
-        self.centralityButton = ttk.Button(self.top_frame, text='Calculate centrality', command=self.calculateCentrality)
+        self.loadButton = ttk.Button(self.top_frame, text='Load graph', command=self.load_graph)
+        self.load_final_button = ttk.Button(self.top_frame, text='Load final graph', command=self.load_final_graph)
+        self.centralityButton = ttk.Button(self.top_frame, text='Calculate centrality', command=self.calculate_centrality)
 
         self.childCountLabel = ttk.Label(self.top_frame, text="Min Child count:", font=("Helvetica", 12))
         self.childCountInput = ttk.Entry(self.top_frame, textvariable=self.childCount)
@@ -135,7 +135,6 @@ class App(Frame):
         # self.searchInput.grid(row=2, column=3, sticky="w", padx=5, pady=5)
         # self.search_text.trace("w", lambda name, index, mode, sv=self.search_text: self.search())
 
-        self.chosenDatasetName = StringVar()
         self.chooseCombo = ttk.Combobox(self.top_frame, textvariable=self.chosenDatasetName, state='readonly')
         self.chooseCombo['values'] = ("simple", "polish")
         self.chooseCombo.bind("<<ComboboxSelected>>", self.newselection)
@@ -148,6 +147,7 @@ class App(Frame):
         self.articleCountInput.grid(row=2, column=1, sticky="w", padx=5, pady=5)
         self.reduceButton.grid(row=1, column=2, sticky="w", padx=5, pady=5)
         self.loadButton.grid(row=0, column=2, sticky="w", padx=5, pady=5)
+        self.load_final_button.grid(row=0, column=3, sticky="w", padx=5, pady=5)
         self.centralityButton.grid(row=2, column=2, sticky="w", padx=5, pady=5)
 
         # self.searchLabel.grid(row=3, column=1, sticky="w", padx=5, pady=5)
@@ -204,13 +204,9 @@ class App(Frame):
         self.merged_categories_scrollbar.grid(row=3, column=3, sticky='ns')
 
         # Set state
-        self.chosenDatasetName.set("simple")
         self.childCount.set(5)
         self.articleCount.set(10)
-        if self.isGraphPresent:
-            self.reduceButton.state(["!disabled"])
-        else:
-            self.reduceButton.state(["disabled"])
+        self.validate_buttons()
 
     def center_window(self):
         w = 800
@@ -222,12 +218,17 @@ class App(Frame):
         self.parent.geometry('%dx%d+%d+%d' % (w, h, x, y))
 
     def create_tree(self):
+        # self.tree.delete(*self.tree.get_children())
+        for i in self.tree.get_children():
+            self.tree.delete(i)
+
         roots = get_roots(self.g)
+        print(roots)
 
         [self.add_children(root, "", 0) for root in roots]
 
     def add_children(self, parent, parent_id, depth):
-        if depth < 10:
+        if depth < 7:
             id = self.tree.insert(parent_id, 0, text=str(self.g.vp.title[parent]), values=(
                 str(self.g.vp.child_count[parent]),
                 str(self.g.vp.articles[parent].__len__()),
@@ -238,7 +239,7 @@ class App(Frame):
             children = get_children(self.g, parent)
             for child in children:
                 if child != parent:
-                    self.add_children(child, id, depth+1)
+                    self.add_children(child, id, depth + 1)
 
 
 def main():
