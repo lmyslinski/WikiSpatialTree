@@ -33,7 +33,7 @@ def build_graph(graph_matrix, dataset):
     g.vp.title = g.new_vertex_property("string")
     g.vp.article_count = g.new_vertex_property("int")
     g.vp.merged_categories = g.new_vertex_property("vector<string>")
-    g.vp.  = g.new_vertex_property("vector<string>")
+    g.vp.rejected_parents = g.new_vertex_property("vector<string>")
     g.vp.category_links = g.new_vertex_property("vector<int>")
     g.vp.articles = g.new_vertex_property("vector<string>")
     g.vp.harmonic_centrality = g.new_vertex_property("float")
