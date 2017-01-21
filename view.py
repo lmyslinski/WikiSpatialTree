@@ -101,12 +101,16 @@ class App(Frame):
     def selectItem(self, event):
         self.articles_box.delete(0, END)
         self.merged_categories_box.delete(0, END)
+        # self.rejected_parents_box.delete(0, END)
         curItem = self.tree.focus()
         if curItem is not '':
             id = self.tree.item(curItem)['values'][3]
             print
             for merged_category in sorted(self.g.vp.merged_categories[id]):
                 self.merged_categories_box.insert(END, merged_category)
+
+            # for merged_category in sorted(self.g.vp.rejected_parents[id]):
+            #     self.rejected_parents_box.insert(END, merged_category)
 
             for article in sorted(self.g.vp.articles[id]):
                 self.articles_box.insert(END, article)
@@ -170,7 +174,8 @@ class App(Frame):
         self.tree_scrollbar = Scrollbar(self)
         self.articles_box_scrollbar = Scrollbar(self)
         self.merged_categories_scrollbar = Scrollbar(self)
-        self.tree.grid(row=0, column=0, sticky="nesw", columnspan=2, rowspan=4)
+        self.rejected_parents_scrollbar = Scrollbar(self)
+        self.tree.grid(row=0, column=0, sticky="nesw", columnspan=2, rowspan=6)
         self.columnconfigure(0, weight=1)
         self.rowconfigure(1, weight=6)
         self.rowconfigure(3, weight=4)
@@ -181,7 +186,7 @@ class App(Frame):
         self.tree.bind('<KeyRelease-Down>', self.selectItem)
         self.tree.bind('<KeyRelease-Up>', self.selectItem)
 
-        self.tree_scrollbar.grid(row=0, column=1, sticky='ns', rowspan=4)
+        self.tree_scrollbar.grid(row=0, column=1, sticky='ns', rowspan=6)
 
         self.article_box_label = ttk.Label(self, text="Articles", font=("Helvetica", 12))
         self.article_box_label.grid(row=0, column=2)
@@ -196,12 +201,22 @@ class App(Frame):
         self.merged_categories_label = ttk.Label(self, text="Merged categories", font=("Helvetica", 12))
         self.merged_categories_label.grid(row=2, column=2)
 
+        self.rejected_parents = ttk.Label(self, text="Rejected parents", font=("Helvetica", 12))
+        self.rejected_parents.grid(row=4, column=2)
+
         self.merged_categories_box = Listbox(self)
         self.merged_categories_box.grid(row=3, column=2, sticky='ns', padx=(5, 0))
+
+        self.rejected_parents_box = Listbox(self)
+        self.rejected_parents_box.grid(row=5, column=2, sticky='ns', padx=(5, 0))
 
         self.merged_categories_box.configure(yscrollcommand=self.merged_categories_scrollbar.set)
         self.merged_categories_scrollbar.config(command=self.merged_categories_box.yview)
         self.merged_categories_scrollbar.grid(row=3, column=3, sticky='ns')
+
+        self.rejected_parents_box.configure(yscrollcommand=self.rejected_parents_scrollbar.set)
+        self.rejected_parents_scrollbar.config(command=self.rejected_parents_box.yview)
+        self.rejected_parents_scrollbar.grid(row=5, column=3, sticky='ns')
 
         # Set state
         self.childCount.set(5)

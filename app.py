@@ -52,6 +52,8 @@ class TreeReducer:
                 if distance < min_distance:
                     min_distance = distance
                     best_parent = parent
+                # else:
+                #     self.g.vp.rejected_parents.append(self.g.vp.title[parent])
         return best_parent
 
     def filter_by_name(self, title):
