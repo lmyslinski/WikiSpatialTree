@@ -9,7 +9,6 @@ import os
 import re
 import pickle
 
-
 class TreeReducer:
     def __init__(self, dataset):
         self.pattern = re.compile('|'.join(["stub[_s \ Z]",
@@ -34,9 +33,36 @@ class TreeReducer:
                                             "Albums_with_cover_art_by_",
                                             "speaking_countries",
                                             "alumni",
-                                            "_screenwriters"]))
+                                            "_screenwriters",
+                                            "Urodzeni_w",
+                                            "Zmarli_w",
+                                            "Odznaczeni_",
+                                            "Zas.u.eni",
+                                            "zwi.zani_z",
+                                            "Zwi.zani_z",
+                                            "Cz.onkowie",
+                                            "Dzia.acze",
+                                            "Reprezentanci",
+                                            # "Kalendarium_",
+                                            # "Kalendaria",
+                                            # "Listy",
+                                            # "Lista",
+                                            "[0-9][0-9][0-9]_w_",
+                                            "_[0-9][0-9][0-9]",
+                                            "tymczasowe",
+                                            # "Metastrony",
+                                            # "wikip",
+                                            # "Wikip",
+                                            # "Konflikty_i_ich_rozwi",
+                                            "Rankingi",
+                                            "Aktualne",
+                                            "Strony_",
+                                            "Szablony",
+                                            "Skarbnica",
+                                            "Porucznicy"
+                                            ]))
 
-        self.list_pattern = re.compile('|'.join([".*_by_"]))
+        self.list_pattern = re.compile('|'.join([".*_by_",".*_wed.*ug_","Listy","Lista"]))
         self.dataset = dataset
         self.deletion_list = []
         self.g = None
