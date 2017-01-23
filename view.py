@@ -1,3 +1,4 @@
+# coding=utf-8
 import pickle
 from Tkinter import Tk, Frame, BOTH, Scrollbar, StringVar, IntVar, Listbox, END
 import ttk
@@ -25,6 +26,7 @@ def get_child_count(g, vertex):
 def get_children(g, vertex):
     return sorted([g.vertex(x.target()) for x in filter(lambda y: y.target() != vertex, list(vertex.all_edges()))],
                   key=lambda z: g.vp.title[z], reverse=True)
+
 
 
 class App(Frame):
@@ -67,14 +69,14 @@ class App(Frame):
     def load_graph(self):
         with open('data/' + self.chosenDatasetName + '/graph.pickle', 'rb') as handle:
             self.g = pickle.load(handle)
-            self.create_tree()
+            self.create_tree(False)
             self.isGraphPresent = TreeReducer.isGraphPresent(self.tr)
             self.validate_buttons()
 
     def load_final_graph(self):
         with open('data/' + self.chosenDatasetName + '/graph_final.pickle', 'rb') as handle:
             self.g = pickle.load(handle)
-            self.create_tree()
+            self.create_tree(True)
             self.isGraphPresent = TreeReducer.isGraphPresent(self.tr)
             self.validate_buttons()
 
@@ -85,7 +87,7 @@ class App(Frame):
         self.tr.extract_lists()
         self.tr.calculate_children_count()
         self.tr.merge_by_criteria(5, 10)
-        self.create_tree()
+        self.create_tree(True)
         print ("Reduction done")
         with open('data/' + self.chosenDatasetName + '/graph_final.pickle', 'wb') as handle:
             pickle.dump(self.g, handle)
@@ -96,21 +98,20 @@ class App(Frame):
         with open('data/' + self.chosenDatasetName + '/graph_final.pickle', 'wb') as handle:
             pickle.dump(self.g, handle)
 
-        self.create_tree()
+        self.create_tree(True)
 
     def selectItem(self, event):
         self.articles_box.delete(0, END)
         self.merged_categories_box.delete(0, END)
-        # self.rejected_parents_box.delete(0, END)
+        self.rejected_parents_box.delete(0, END)
         curItem = self.tree.focus()
         if curItem is not '':
             id = self.tree.item(curItem)['values'][3]
-            print
             for merged_category in sorted(self.g.vp.merged_categories[id]):
                 self.merged_categories_box.insert(END, merged_category)
 
-            # for merged_category in sorted(self.g.vp.rejected_parents[id]):
-            #     self.rejected_parents_box.insert(END, merged_category)
+            for rejected_parent in sorted(self.g.vp.rejected_parents[id]):
+                self.rejected_parents_box.insert(END, rejected_parent)
 
             for article in sorted(self.g.vp.articles[id]):
                 self.articles_box.insert(END, article)
@@ -232,15 +233,16 @@ class App(Frame):
         y = (sh - h) / 2
         self.parent.geometry('%dx%d+%d+%d' % (w, h, x, y))
 
-    def create_tree(self):
-        # self.tree.delete(*self.tree.get_children())
+    def create_tree(self, single_root):
         for i in self.tree.get_children():
             self.tree.delete(i)
 
         roots = get_roots(self.g)
-        print(roots)
-
-        [self.add_children(root, "", 0) for root in roots]
+        if single_root:
+            root = next(x for x in roots if self.g.vp.title[x] == self.chosenDataset.root_title)
+            self.add_children(root, "", 0)
+        else:
+            [self.add_children(root, "", 0) for root in roots]
 
     def add_children(self, parent, parent_id, depth):
         if depth < 7:
@@ -262,12 +264,12 @@ def main():
     datasets = {"simple": Dataset("simple", 'data/simple/categories', 'data/simple/simple-20120104-titlecat.twr',
                                   'data/simple/simple-20120104-catlinks.twr',
                                   'data/simple/simple-20120104-pagetitle.twr',
-                                  '\t'),
+                                  '\t', "Articles"),
                 "polish": Dataset("polish", 'data/polish/simple-20120104-cattreeid.twr',
                                   'data/polish/simple-20120104-titlecat.twr',
                                   'data/polish/simple-20120104-catlinks.twr',
                                   'data/polish/simple-20120104-pagetitle.twr',
-                                  ' ')}
+                                  ' ', "Kategorie")}
 
     App(root, datasets)
     root.mainloop()

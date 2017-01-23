@@ -52,8 +52,6 @@ class TreeReducer:
                 if distance < min_distance:
                     min_distance = distance
                     best_parent = parent
-                # else:
-                #     self.g.vp.rejected_parents.append(self.g.vp.title[parent])
         return best_parent
 
     def filter_by_name(self, title):
@@ -66,6 +64,12 @@ class TreeReducer:
         parents = [self.g.vertex(x.source()) for x in filter(lambda y: y.target() == vertex, edges)]
         children = [self.g.vertex(x.target()) for x in filter(lambda y: y.target() != vertex, edges)]
         return parents, children
+
+    def add_rejected_parents(self, vertex, parents, best_parent):
+        leftover_parents = [x for x in filter(lambda y: y != best_parent, parents)]
+        for parent in leftover_parents:
+            self.g.vp.rejected_parents[vertex].append(self.g.vp.title[parent])
+
 
     def get_parents(self, vertex, edges):
         return [self.g.vertex(x.source()) for x in filter(lambda y: y.target() == vertex, edges)]
@@ -89,7 +93,6 @@ class TreeReducer:
     def merge_vertex(self, vertex, edges, parents, children):
         self.deletion_list.append(vertex)
         parent = self.get_most_important_parent(vertex, parents)
-
         self.g.vp.merged_categories[parent].append(self.g.vp.title[vertex])
         self.g.vp.merged_categories[parent].extend(self.g.vp.merged_categories[vertex])
         self.g.vp.articles[parent].extend(self.g.vp.articles[vertex])
@@ -151,6 +154,7 @@ class TreeReducer:
             parents_without_children = self.get_parents_without_cycles(parents, children)
             if parents.__len__() > 1:
                 best_parent = self.get_most_important_parent(vertex, parents_without_children)
+                self.add_rejected_parents(vertex, parents, best_parent)
                 leftover_parent_edges = self.get_leftover_edges(vertex, edges, best_parent)
                 for edge in leftover_parent_edges:
                     self.g.remove_edge(edge)

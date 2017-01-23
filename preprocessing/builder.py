@@ -6,13 +6,14 @@ from graph_tool.all import Graph
 
 
 class Dataset:
-    def __init__(self, name, cat_file, cat_title_file, cat_links_file, page_title_file, delimiter):
+    def __init__(self, name, cat_file, cat_title_file, cat_links_file, page_title_file, delimiter, root_title):
         self.cat_links_file = cat_links_file
         self.cat_title_file = cat_title_file
         self.cat_file = cat_file
         self.page_title_file = page_title_file
         self.name = name
         self.delimiter = delimiter
+        self.root_title = root_title
 
 
 def build_matrix(dataset):
