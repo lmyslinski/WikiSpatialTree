@@ -80,7 +80,10 @@ class App(Frame):
             self.isGraphPresent = TreeReducer.isGraphPresent(self.tr)
             self.validate_buttons()
 
+
     def reduce(self):
+        print "Number of nodes:"
+        print list(self.g.vertices()).__len__()
         self.tr = TreeReducer(self.chosenDataset)
         self.tr.g = self.g
         self.tr.reduce_to_single_parent()
@@ -88,9 +91,16 @@ class App(Frame):
         self.tr.calculate_children_count()
         self.tr.merge_by_criteria(5, 10)
         self.create_tree(True)
+        removed_nodes = 0
+        for vertex in self.tr.g.vertices():
+            if list(vertex.all_edges()).__len__() == 0:
+                removed_nodes += 1
         print ("Reduction done")
+        print "Removed nodes:"
+        print removed_nodes
         with open('data/' + self.chosenDatasetName + '/graph_final.pickle', 'wb') as handle:
             pickle.dump(self.g, handle)
+
 
     def calculate_centrality(self):
         self.tr.calculate_centrality()

@@ -43,17 +43,9 @@ class TreeReducer:
                                             "Cz.onkowie",
                                             "Dzia.acze",
                                             "Reprezentanci",
-                                            # "Kalendarium_",
-                                            # "Kalendaria",
-                                            # "Listy",
-                                            # "Lista",
                                             "[0-9][0-9][0-9]_w_",
                                             "_[0-9][0-9][0-9]",
                                             "tymczasowe",
-                                            # "Metastrony",
-                                            # "wikip",
-                                            # "Wikip",
-                                            # "Konflikty_i_ich_rozwi",
                                             "Rankingi",
                                             "Aktualne",
                                             "Strony_",
@@ -62,7 +54,7 @@ class TreeReducer:
                                             "Porucznicy"
                                             ]))
 
-        self.list_pattern = re.compile('|'.join([".*_by_",".*_wed.*ug_","Listy","Lista"]))
+        self.list_pattern = re.compile('|'.join([".*_by_",".*_wed.*ug_","Listy","Lista","Metastrony","Kalendaria"]))
         self.dataset = dataset
         self.deletion_list = []
         self.g = None
