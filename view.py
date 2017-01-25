@@ -10,7 +10,7 @@ from preprocessing.builder import Dataset
 def get_roots(g):
     roots = []
     for vertex in g.vertices():
-        if get_parent_count(g, vertex) == 0 and get_child_count(g, vertex) != 0:
+        if get_parent_count(g, vertex) == 0:
             roots.append(vertex)
     return sorted(roots, key=lambda x: g.vp.title[x], reverse=True)
 
@@ -26,7 +26,6 @@ def get_child_count(g, vertex):
 def get_children(g, vertex):
     return sorted([g.vertex(x.target()) for x in filter(lambda y: y.target() != vertex, list(vertex.all_edges()))],
                   key=lambda z: g.vp.title[z], reverse=True)
-
 
 
 class App(Frame):
@@ -50,7 +49,6 @@ class App(Frame):
         self.isGraphPresent = False
         self.initUI()
 
-
     def validate_buttons(self):
         if self.isGraphPresent:
             self.reduceButton.state(["!disabled"])
@@ -69,46 +67,41 @@ class App(Frame):
     def load_graph(self):
         with open('data/' + self.chosenDatasetName + '/graph.pickle', 'rb') as handle:
             self.g = pickle.load(handle)
-            self.create_tree(False)
+            self.create_tree()
             self.isGraphPresent = TreeReducer.isGraphPresent(self.tr)
             self.validate_buttons()
 
     def load_final_graph(self):
         with open('data/' + self.chosenDatasetName + '/graph_final.pickle', 'rb') as handle:
             self.g = pickle.load(handle)
-            self.create_tree(True)
+            self.create_tree()
             self.isGraphPresent = TreeReducer.isGraphPresent(self.tr)
             self.validate_buttons()
 
-
     def reduce(self):
-        print "Number of nodes:"
-        print list(self.g.vertices()).__len__()
         self.tr = TreeReducer(self.chosenDataset)
         self.tr.g = self.g
+        self.tr.remove_unconnected_categories()
         self.tr.reduce_to_single_parent()
-        self.tr.extract_lists()
+        self.tr.remove_matched_categories()
         self.tr.calculate_children_count()
         self.tr.merge_by_criteria(5, 10)
-        self.create_tree(True)
-        removed_nodes = 0
-        for vertex in self.tr.g.vertices():
-            if list(vertex.all_edges()).__len__() == 0:
-                removed_nodes += 1
+        self.tr.delete_just_to_be_sure()
+        self.g = self.tr.g
+        print list(self.g.vertices()).__len__()
+        self.create_tree()
         print ("Reduction done")
-        print "Removed nodes:"
-        print removed_nodes
         with open('data/' + self.chosenDatasetName + '/graph_final.pickle', 'wb') as handle:
             pickle.dump(self.g, handle)
 
-
     def calculate_centrality(self):
+        self.tr.g = self.g
         self.tr.calculate_centrality()
         self.g = self.tr.g
         with open('data/' + self.chosenDatasetName + '/graph_final.pickle', 'wb') as handle:
             pickle.dump(self.g, handle)
 
-        self.create_tree(True)
+        self.create_tree()
 
     def selectItem(self, event):
         self.articles_box.delete(0, END)
@@ -132,23 +125,18 @@ class App(Frame):
         self.top_frame.pack()
         self.right_frame.pack()
         self.pack(fill=BOTH, expand=1)
-        # Top Frame
-        # self.searchLabel = ttk.Label(self.top_frame, text="Search:", font=("Helvetica", 12))
         self.chooseLabel = ttk.Label(self.top_frame, text="Dataset", font=("Helvetica", 12))
 
         self.reduceButton = ttk.Button(self.top_frame, text='Reduce', command=self.reduce)
         self.loadButton = ttk.Button(self.top_frame, text='Load graph', command=self.load_graph)
         self.load_final_button = ttk.Button(self.top_frame, text='Load final graph', command=self.load_final_graph)
-        self.centralityButton = ttk.Button(self.top_frame, text='Calculate centrality', command=self.calculate_centrality)
+        self.centralityButton = ttk.Button(self.top_frame, text='Calculate centrality',
+                                           command=self.calculate_centrality)
 
         self.childCountLabel = ttk.Label(self.top_frame, text="Min Child count:", font=("Helvetica", 12))
         self.childCountInput = ttk.Entry(self.top_frame, textvariable=self.childCount)
         self.articleCountLabel = ttk.Label(self.top_frame, text="Min Article count:", font=("Helvetica", 12))
         self.articleCountInput = ttk.Entry(self.top_frame, textvariable=self.articleCount)
-        #
-        # self.searchInput = ttk.Entry(self.top_frame, textvariable=self.search_text)
-        # self.searchInput.grid(row=2, column=3, sticky="w", padx=5, pady=5)
-        # self.search_text.trace("w", lambda name, index, mode, sv=self.search_text: self.search())
 
         self.chooseCombo = ttk.Combobox(self.top_frame, textvariable=self.chosenDatasetName, state='readonly')
         self.chooseCombo['values'] = ("simple", "polish")
@@ -243,19 +231,15 @@ class App(Frame):
         y = (sh - h) / 2
         self.parent.geometry('%dx%d+%d+%d' % (w, h, x, y))
 
-    def create_tree(self, single_root):
+    def create_tree(self):
         for i in self.tree.get_children():
             self.tree.delete(i)
 
         roots = get_roots(self.g)
-        if single_root:
-            root = next(x for x in roots if self.g.vp.title[x] == self.chosenDataset.root_title)
-            self.add_children(root, "", 0)
-        else:
-            [self.add_children(root, "", 0) for root in roots]
+        [self.add_children(root, "", 0) for root in roots]
 
     def add_children(self, parent, parent_id, depth):
-        if depth < 7:
+        if depth < 4:
             id = self.tree.insert(parent_id, 0, text=str(self.g.vp.title[parent]), values=(
                 str(self.g.vp.child_count[parent]),
                 str(self.g.vp.articles[parent].__len__()),

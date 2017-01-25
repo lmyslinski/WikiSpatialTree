@@ -18,7 +18,7 @@ tr.g = gf
 # tr.mark_categories_for_deletion()
 # tr.delete_categories()
 tr.reduce_to_single_parent()
-tr.extract_lists()
+tr.remove_matched_categories()
 tr.calculate_children_count()
 tr.merge_by_criteria(5, 10)
 # tr.delete_categories()
