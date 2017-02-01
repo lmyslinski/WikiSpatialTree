@@ -1,15 +1,12 @@
 import time
 from sys import stdout
 
-from graph_tool.draw import graph_draw
-from graph_tool.topology import shortest_path, shortest_distance
+from graph_tool.topology import shortest_distance
 
 from preprocessing import builder
 import os
 import re
 import pickle
-import gc
-import objgraph
 
 
 class TreeReducer:
