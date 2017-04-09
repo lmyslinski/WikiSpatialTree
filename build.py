@@ -13,4 +13,4 @@ ds2 = Dataset("polish", 'data/polish/pl-20170101-cattreeid.twr',
                               ' ', "Kategorie")
 
 builder.build_graph(builder.build_matrix(ds), ds)
-builder.build_graph(builder.build_matrix(ds2), ds2)
+# builder.build_graph(builder.build_matrix(ds2), ds2)

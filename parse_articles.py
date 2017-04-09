@@ -6,13 +6,14 @@ import cPickle as pickle
 path = 'data/simple/articles'
 
 articles = dict()
+
 for f in listdir(path):
     filepath = join(path, f)
     soup = BeautifulSoup(open(filepath), 'lxml')
     docs = soup.findAll("doc")
     for doc in docs:
-        content = unicode(doc.contents[0])
-        articles[doc.get('title')] = content
+        content = (unicode(doc.contents[0])).encode('utf-8')
+        articles[int(doc.get('id'))] = content
     print ("Parsed " + filepath)
 
 print articles.__len__()

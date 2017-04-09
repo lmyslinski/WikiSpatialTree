@@ -41,7 +41,6 @@ def build_graph(graph_matrix, dataset):
     vertex_to_id_map = dict()
     title_to_vertex_id_map = dict()
 
-
     # generate all vertex
     with open(dataset.cat_title_file) as titlecat_file:
         reader = csv.reader(titlecat_file, delimiter=' ')
@@ -53,7 +52,7 @@ def build_graph(graph_matrix, dataset):
             title_to_vertex_id_map[title] = vertex
             g.vp.title[vertex] = title
 
-    # populate the graph with edges
+    #populate the graph with edges
     for key in graph_matrix:
         adjacency_list = graph_matrix[key]
         for edge in adjacency_list:
@@ -65,14 +64,20 @@ def build_graph(graph_matrix, dataset):
         for row in reader:
             all_articles_map[int(row[0])] = row[1]
 
-    with open(dataset.cat_links_file) as cat_links_file:
-        reader = csv.reader(cat_links_file, delimiter=' ')
-        for row in reader:
-            key = int(row[0])
-            vertex = g.vertex(vertex_to_id_map[key])
-            if key in vertex_to_id_map:
-                for i in range(1, row.__len__()):
-                    g.vp.articles[vertex].append(all_articles_map[int(row[i])])
+    # assign articles
+    with open('data/simple/articles.pickle', 'rb') as articles_file:
+        articles = pickle.load(articles_file)
+        with open(dataset.cat_links_file) as cat_links_file:
+            reader = csv.reader(cat_links_file, delimiter=' ')
+            for row in reader:
+                key = int(row[0])
+                vertex = g.vertex(vertex_to_id_map[key])
+                if key in vertex_to_id_map:
+                    for i in range(1, row.__len__()):
+                        article_key = int(row[i])
+                        if article_key in articles:
+                            article = articles[int(row[i])]
+                            g.vp.articles[vertex].append(article)
 
 
     # assign category links
