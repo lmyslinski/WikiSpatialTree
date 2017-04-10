@@ -4,6 +4,7 @@ import pickle
 
 from graph_tool.all import Graph
 
+import doc2vec
 
 class Dataset:
     def __init__(self, name, cat_file, cat_title_file, cat_links_file, page_title_file, delimiter, root_title):
@@ -37,6 +38,7 @@ def build_graph(graph_matrix, dataset):
     g.vp.rejected_parents = g.new_vertex_property("vector<string>")
     g.vp.category_links = g.new_vertex_property("vector<int>")
     g.vp.articles = g.new_vertex_property("vector<string>")
+    g.vp.cat2vec = g.new_vertex_property("vector<float>")
     g.vp.harmonic_centrality = g.new_vertex_property("float")
     vertex_to_id_map = dict()
     title_to_vertex_id_map = dict()
@@ -78,6 +80,9 @@ def build_graph(graph_matrix, dataset):
                         if article_key in articles:
                             article = articles[int(row[i])]
                             g.vp.articles[vertex].append(article)
+
+    # count category vectors from articles
+    doc2vec.count_vector(g)
 
 
     # assign category links
