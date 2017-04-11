@@ -81,9 +81,6 @@ def build_graph(graph_matrix, dataset):
                             article = articles[int(row[i])]
                             g.vp.articles[vertex].append(article)
 
-    # count category vectors from articles
-    doc2vec.count_vector(g)
-
 
     # assign category links
     with open(dataset.cat_links_file) as cat_links_file:
