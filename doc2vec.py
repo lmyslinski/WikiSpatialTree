@@ -36,7 +36,7 @@ def count_vector(graph):
     # train the model
     it = LabeledLineSentence(data, docLabels)
 
-    model = gensim.models.Doc2Vec(size=10, window=10, min_count=1, workers=11, alpha=0.025,
+    model = gensim.models.Doc2Vec(size=100, window=10, min_count=1, workers=11, alpha=0.025,
                                   min_alpha=0.025)  # use fixed learning rate
     model.build_vocab(it)
     for epoch in range(10):
@@ -52,5 +52,8 @@ def count_vector(graph):
         graph.vp.cat2vec[vertex] = model.docvecs[graph.vp.title[vertex]]
         # print graph.vp.cat2vec[vertex]
 
-    print model.docvecs.most_similar('Articles')
+    # test without training
+    # model = gensim.models.Doc2Vec.load("doc2vec.model")
+
+    print model.docvecs.most_similar('Travel')
     # print len(model.docvecs.offset2doctag)
