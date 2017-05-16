@@ -8,7 +8,7 @@ from app import TreeReducer
 import doc2vec
 
 
-with open('data/simple/graph_final.pickle', 'rb') as handle:
+with open('data/simple/graph_small.pickle', 'rb') as handle:
     gf = pickle.load(handle)
 
 
