@@ -28,15 +28,7 @@ def count_vector(graph):
 
     model.save("doc2vec.model")
 
-    # for i in range(0, 19):
-    #     print model.docvecs.similarity(0, i)
-    # return model
+    for vertex in graph.vertices():
+        graph.vp.cat2vec[vertex] = model.docvecs[graph.vp.title[vertex]]
 
-    # print (model['computer'])
-
-    # shows the similar docs with id = 2
     print (model.docvecs.most_similar('Geography'))
-
-
-    # model.accuracy()
-    # print len(model.docvecs.offset2doctag)
