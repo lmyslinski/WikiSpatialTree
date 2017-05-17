@@ -40,6 +40,8 @@ def build_graph(graph_matrix, dataset):
     g.vp.articles = g.new_vertex_property("vector<string>")
     g.vp.cat2vec = g.new_vertex_property("vector<float>")
     g.vp.harmonic_centrality = g.new_vertex_property("float")
+    # g.vp.bow = g.new_vertex_property("vector<int>")
+    # bow = dict()
     vertex_to_id_map = dict()
     title_to_vertex_id_map = dict()
 
