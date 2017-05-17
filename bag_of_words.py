@@ -19,11 +19,11 @@ def bag_of_words(graph):
 
         docs.append(articles_text.split())
 
-    # # create & save a dictionary
-    #
+    # create & save a dictionary
+
     # # remove common words and tokenize
     # stoplist = set('for a of the and to in'.split())
-    # texts = [[word for word in document.words if word not in stoplist]
+    # texts = [[word for word in document if word not in stoplist]
     #          for document in docs]
     #
     # # remove words that appear only once
