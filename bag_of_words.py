@@ -1,12 +1,15 @@
 import logging, gensim
 import cPickle as pickle
+import string
 from graph_tool import Graph
+
+import numpy as np
 from gensim import corpora
 from scipy.linalg import norm
 
 from gensim.similarities import Similarity
 
-logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.DEBUG)
+logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
 
 
 def get_children(g, vertex, edges):
@@ -41,18 +44,23 @@ def build_bow(graph):
     texts = [[token for token in text if frequency[token] > 1] for text in texts]
     dictionary = corpora.Dictionary(texts)
     for vertex in graph.vertices():
-        articles_text = ""
-        for article in graph.vp.articles[vertex]:
-            articles_text = articles_text + article
-        d = dictionary.doc2bow(articles_text.split())
-        graph.vp.bow[vertex] = d
+        category_articles = string.join(graph.vp.articles[vertex]).split()
+        graph.vp.bow[vertex] = dictionary.doc2bow(category_articles)
     dictionary.save('/tmp/bag_of_words.dict')
     corpus = [graph.vp.bow[vertex] for vertex in graph.vertices()]
-    index = Similarity('/tmp/tst', corpus=corpus, num_features=10000)
+    index = Similarity('/tmp/tst', corpus=corpus, num_features=dictionary.__len__())
     with open('data/simple/graph_small.pickle', 'wb') as handle:
         pickle.dump(graph, handle)
 
-    print(index.similarity_by_id(1))
+    print graph.vp.title[10]
+    similarities = np.sort(index.similarity_by_id(10))[::-1]
+    for i in range(0, similarities.__len__()):
+        print(graph.vp.title[i] + " " + str(similarities[i]))
+
+
+
+
+
 
 
 def loadBow(graph):
