@@ -22,6 +22,7 @@ g2.vp.title = g2.new_vertex_property("string")
 g2.vp.article_count = g2.new_vertex_property("int")
 g2.vp.articles = g2.new_vertex_property("vector<string>")
 g2.vp.cat2vec = g2.new_vertex_property("vector<float>")
+g2.vp.bow = g2.new_vertex_property("object")
 
 categories = ['Geography', 'Engineering', "Computer_science", "Clothing"]
 
@@ -38,6 +39,6 @@ for vertex in gf.vertices():
 
 model = doc2vec.count_vector(g2)
 
-# with open('data/simple/graph_small.pickle', 'wb') as handle:
-#     pickle.dump(g2, handle)
+with open('data/simple/graph_small.pickle', 'wb') as handle:
+    pickle.dump(g2, handle)
 
