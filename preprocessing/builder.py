@@ -68,7 +68,7 @@ def build_graph(graph_matrix, dataset):
             all_articles_map[int(row[0])] = row[1]
 
     # assign articles
-    with open('data/simple/articles_parsed.pickle', 'rb') as articles_file:
+    with open('data/simple/models/articles_parsed.pickle', 'rb') as articles_file:
         articles = pickle.load(articles_file)
         with open(dataset.cat_links_file) as cat_links_file:
             reader = csv.reader(cat_links_file, delimiter=' ')

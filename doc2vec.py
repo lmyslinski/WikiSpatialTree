@@ -26,7 +26,7 @@ def count_vector(graph):
         model.alpha -= 0.002
         model.min_alpha = model.alpha
 
-    model.save("data/simple/models/doc2vec.model")
+    model.save("data/simple/models/graph_small.model")
 
     for vertex in graph.vertices():
         graph.vp.cat2vec[vertex] = model.docvecs[graph.vp.title[vertex]]
