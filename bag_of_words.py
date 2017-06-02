@@ -17,7 +17,7 @@ def get_children(g, vertex, edges):
 
 
 
-def build_bow(graph):
+def get_bow(graph, with_children=False):
     docs = []
 
     for vertex in graph.vertices():
@@ -49,13 +49,13 @@ def build_bow(graph):
     dictionary.save('/tmp/bag_of_words.dict')
     corpus = [graph.vp.bow[vertex] for vertex in graph.vertices()]
     index = Similarity('/tmp/tst', corpus=corpus, num_features=dictionary.__len__())
-    with open('data/simple/graph_small.pickle', 'wb') as handle:
-        pickle.dump(graph, handle)
+    # with open('data/simple/models/graph_small.pickle', 'wb') as handle:
+    #     pickle.dump(graph, handle)
 
-    print graph.vp.title[10]
-    similarities = np.sort(index.similarity_by_id(10))[::-1]
-    for i in range(0, similarities.__len__()):
-        print(graph.vp.title[i] + " " + str(similarities[i]))
+    # print graph.vp.title[10]
+    # similarities = np.sort(index.similarity_by_id(10))[::-1]
+    # for i in range(0, similarities.__len__()):
+    #     print(graph.vp.title[i] + " " + str(similarities[i]))
 
 
 
@@ -92,9 +92,9 @@ def loadBow(graph):
 
 
 
-with open('data/simple/graph_small.pickle', 'rb') as handle:
+with open('data/simple/models/graph_small.pickle', 'rb') as handle:
     gf = pickle.load(handle)
 
-    build_bow(gf)
+    get_bow(gf)
     # loadBow(gf)
 

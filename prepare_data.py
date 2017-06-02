@@ -141,7 +141,7 @@ else:
     # for vertex in g2.vertices():
     #     word_count = g2.articles
 
-    model = doc2vec.count_vector(g2)
+    model = doc2vec.doc2vec(g2)
 
     print("Model trainer")
 

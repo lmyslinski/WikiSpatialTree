@@ -13,4 +13,4 @@ with open('data/simple/graph_final.pickle', 'rb') as handle:
     gf = pickle.load(handle)
 
 # count category vectors from articles
-doc2vec.count_vector(gf)
+doc2vec.doc2vec(gf)
